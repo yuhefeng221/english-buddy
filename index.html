@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>English Buddy - 英语陪聊机器人</title>
+    <link rel="icon" href="data:,">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            padding: 20px;
+        }
+        .container {
+            width: 100%;
+            max-width: 480px;
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 32px 24px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+        h1 {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 4px;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            text-align: center;
+            color: rgba(255,255,255,0.5);
+            font-size: 13px;
+            margin-bottom: 28px;
+        }
+
+        /* 对话记录 */
+        .chat-box {
+            height: 360px;
+            overflow-y: auto;
+            padding: 12px;
+            margin-bottom: 16px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .chat-box::-webkit-scrollbar { width: 4px; }
+        .chat-box::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+
+        .message {
+            max-width: 85%;
+            padding: 10px 14px;
+            border-radius: 14px;
+            font-size: 14px;
+            line-height: 1.5;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+        .message.user {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+            border-bottom-right-radius: 4px;
+        }
+        .message.user .label { font-size: 11px; opacity: 0.7; margin-bottom: 2px; }
+
+        .message.ai {
+            align-self: flex-start;
+            background: rgba(255,255,255,0.08);
+            color: #e0e0e0;
+            border-bottom-left-radius: 4px;
+        }
+        .message.ai .label { font-size: 11px; color: #667eea; margin-bottom: 2px; }
+        .message.ai .translation {
+            color: #ffd700;
+            font-size: 13px;
+            margin: 4px 0;
+            font-style: italic;
+        }
+        .message.ai .reply {
+            margin-top: 2px;
+        }
+        .message.ai .reply-cn {
+            color: rgba(255,255,255,0.5);
+            font-size: 12px;
+            margin-top: 6px;
+            padding-top: 6px;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+
+        /* 输入区域 */
+        .input-area {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .input-area input {
+            flex: 1;
+            padding: 12px 16px;
+            border-radius: 24px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.05);
+            color: #fff;
+            font-size: 14px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .input-area input::placeholder { color: rgba(255,255,255,0.3); }
+        .input-area input:focus { border-color: #667eea; }
+
+        .btn {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .btn-send {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+        }
+        .btn-send:hover { transform: scale(1.05); opacity: 0.9; }
+        .btn-send:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+        .btn-mic {
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+        .btn-mic:hover { background: rgba(255,255,255,0.15); }
+        .btn-mic.recording {
+            background: #e74c3c;
+            border-color: #e74c3c;
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(231,76,60,0.5); }
+            100% { box-shadow: 0 0 0 12px rgba(231,76,60,0); }
+        }
+
+        .status {
+            text-align: center;
+            margin-top: 12px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.4);
+            min-height: 18px;
+        }
+        .speak-btn {
+            background: none;
+            border: none;
+            color: #667eea;
+            cursor: pointer;
+            font-size: 14px;
+            margin-left: 4px;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+            padding: 2px 4px;
+        }
+        .speak-btn:hover { opacity: 1; }
+
+        /* TTS 解锁横幅 */
+        .tts-banner {
+            text-align: center;
+            padding: 8px 12px;
+            background: rgba(102, 126, 234, 0.15);
+            border: 1px solid rgba(102, 126, 234, 0.3);
+            border-radius: 12px;
+            font-size: 13px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .tts-banner:hover { background: rgba(102, 126, 234, 0.25); }
+        .tts-banner.unlocked { display: none; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🎙️ English Buddy</h1>
+    <p class="subtitle">说中文，学英语 · 语音输入 · AI 陪练</p>
+
+    <!-- TTS 解锁提示 -->
+    <div class="tts-banner" id="ttsBanner">
+        🔊 <strong>点击此处开启语音播报</strong>（浏览器需要一次点击才能播放声音）
+    </div>
+
+    <div class="chat-box" id="chatBox">
+        <div class="message ai">
+            <div class="label">🤖 AI 老师</div>
+            <div class="reply">Hello! I'm your English speaking partner. Try saying something in Chinese — I'll translate it and reply in English!</div>
+        </div>
+    </div>
+
+    <div class="input-area">
+        <button class="btn btn-mic" id="micBtn" title="语音输入">🎤</button>
+        <input type="text" id="textInput" placeholder="输入中文，或点击麦克风语音输入...">
+        <button class="btn btn-send" id="sendBtn" title="发送">➤</button>
+    </div>
+    <div class="status" id="status">准备就绪，开始练习吧！</div>
+</div>
+
+<script>
+// ============================================================
+//  TTS 解锁 - 必须由用户点击触发, 否则 Chrome/Safari 静音
+// ============================================================
+let ttsUnlocked = false;
+
+function unlockTTS() {
+    if (ttsUnlocked) return true;
+
+    // 创建并立即播放一个极短的静音音频来解锁 AudioContext
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const buf = ctx.createBuffer(1, 1, 22050);
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        src.connect(ctx.destination);
+        src.start();
+        ctx.resume();
+    } catch(e) {
+        console.log('AudioContext unlock:', e);
+    }
+
+    // 尝试 speechSynthesis
+    if (window.speechSynthesis) {
+        // 用一个空字符串试一次
+        const u = new SpeechSynthesisUtterance(' ');
+        u.volume = 0;
+        window.speechSynthesis.speak(u);
+        window.speechSynthesis.cancel();
+    }
+
+    ttsUnlocked = true;
+    document.getElementById('ttsBanner').classList.add('unlocked');
+    setStatus('🔊 语音已开启');
+    console.log('TTS unlocked');
+    return true;
+}
+
+// 页面任意点击或触摸都尝试解锁
+document.addEventListener('click', () => unlockTTS(), { once: true });
+document.addEventListener('touchstart', () => unlockTTS(), { once: true });
+
+// 也可以点击横幅手动解锁
+document.getElementById('ttsBanner').addEventListener('click', () => {
+    unlockTTS();
+});
+
+// ============================================================
+//  语音识别 (Web Speech API)
+// ============================================================
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognition = null;
+let isRecording = false;
+
+if (SpeechRecognition) {
+    recognition = new SpeechRecognition();
+    recognition.lang = 'zh-CN';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onresult = (event) => {
+        const text = event.results[0][0].transcript;
+        document.getElementById('textInput').value = text;
+        setStatus('🎤 识别完成: "' + text + '"');
+        stopRecording();
+        sendMessage(text);
+    };
+
+    recognition.onerror = (event) => {
+        console.error('语音识别错误:', event.error);
+        setStatus('❌ 语音识别失败: ' + event.error);
+        stopRecording();
+    };
+
+    recognition.onend = () => {
+        stopRecording();
+    };
+} else {
+    document.getElementById('micBtn').style.display = 'none';
+    setStatus('⚠️ 此浏览器不支持语音输入，请直接打字');
+}
+
+function startRecording() {
+    if (!recognition) return;
+    unlockTTS();
+    isRecording = true;
+    document.getElementById('micBtn').classList.add('recording');
+    document.getElementById('micBtn').textContent = '⏹️';
+    setStatus('🎤 正在听...请说话');
+    recognition.start();
+}
+
+function stopRecording() {
+    isRecording = false;
+    document.getElementById('micBtn').classList.remove('recording');
+    document.getElementById('micBtn').textContent = '🎤';
+    if (document.getElementById('status').textContent.includes('正在听')) {
+        setStatus('准备就绪');
+    }
+}
+
+document.getElementById('micBtn').addEventListener('click', () => {
+    unlockTTS();
+    if (isRecording) {
+        recognition.stop();
+        stopRecording();
+    } else {
+        startRecording();
+    }
+});
+
+// ============================================================
+//  文字输入 & 发送
+// ============================================================
+function setStatus(text) {
+    document.getElementById('status').textContent = text;
+}
+
+function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+              .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+}
+
+function addMessage(type, content) {
+    const box = document.getElementById('chatBox');
+    const div = document.createElement('div');
+    div.className = 'message ' + type;
+
+    if (type === 'user') {
+        div.innerHTML = `
+            <div class="label">🧑 你 (中文)</div>
+            <div class="text">${escapeHtml(content.original)}</div>
+        `;
+    } else {
+        // 调试日志: 打印后端返回的完整数据
+        console.log('[AI回复原始数据]', content);
+        const replyText = content.reply;
+        const transText = content.translation;
+        const replyCnText = content.reply_cn || '';
+        const replyEscaped = escapeHtml(replyText);
+        const transEscaped = escapeHtml(transText);
+        const replyCnEscaped = escapeHtml(replyCnText);
+        div.innerHTML = `
+            <div class="label">🤖 AI 老师</div>
+            <div class="translation">📝 ${transEscaped}
+                <button class="speak-btn" data-text="${transEscaped}">🔊</button>
+            </div>
+            <div class="reply">💬 ${replyEscaped}
+                <button class="speak-btn" data-text="${replyEscaped}">🔊</button>
+            </div>
+            <div class="reply-cn">🌏 ${replyCnEscaped}</div>
+        `;
+        // 如果没有中文对照，隐藏这一行
+        const cnDiv = div.querySelector('.reply-cn');
+        if (!replyCnText.trim()) {
+            cnDiv.style.display = 'none';
+        }
+        div.querySelectorAll('.speak-btn').forEach(btn => {
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                unlockTTS();
+                speakText(this.getAttribute('data-text'));
+            });
+        });
+    }
+    box.appendChild(div);
+    box.scrollTop = box.scrollHeight;
+}
+
+function sendMessage(text) {
+    if (!text || !text.trim()) return;
+
+    addMessage('user', { original: text });
+
+    const sendBtn = document.getElementById('sendBtn');
+    sendBtn.disabled = true;
+    setStatus('🤔 AI 思考中...');
+
+    fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: text })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.error) {
+            setStatus('❌ 错误: ' + data.error);
+            return;
+        }
+        addMessage('ai', {
+            translation: data.translation,
+            reply: data.reply,
+            reply_cn: data.reply_cn || ''
+        });
+        // 不自动朗读, 让用户点击 🔊 按钮来听
+        setStatus('✅ 回复完成，点击 🔊 听发音');
+    })
+    .catch(err => {
+        setStatus('❌ 网络错误: ' + err.message);
+    })
+    .finally(() => {
+        sendBtn.disabled = false;
+        document.getElementById('textInput').value = '';
+        document.getElementById('textInput').focus();
+    });
+}
+
+// ============================================================
+//  语音合成 (TTS)
+// ============================================================
+function speakText(text) {
+    if (!window.speechSynthesis) {
+        setStatus('❌ 此浏览器不支持语音合成');
+        return;
+    }
+
+    unlockTTS();
+
+    // 停下之前的朗读
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'en-US';
+    utterance.rate = 0.9;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+
+    // 获取可用语音列表
+    const voices = window.speechSynthesis.getVoices();
+    console.log('Available voices:', voices.length, voices.map(v => v.name + '(' + v.lang + ')'));
+
+    // 选一个英语语音, 降级策略
+    let enVoice = null;
+    // 1. 首选 Samantha (macOS 默认高质量英语女声)
+    enVoice = voices.find(v => v.name === 'Samantha');
+    // 2. 次选任何 en_US
+    if (!enVoice) enVoice = voices.find(v => v.lang === 'en-US');
+    // 3. 再选任何 en
+    if (!enVoice) enVoice = voices.find(v => v.lang.startsWith('en'));
+    // 4. 再不济用第一个非空语音
+    if (!enVoice) enVoice = voices.find(v => v.voiceURI && v.lang);
+
+    if (enVoice) {
+        utterance.voice = enVoice;
+        console.log('Using voice:', enVoice.name, enVoice.lang);
+    }
+
+    utterance.onstart = () => {
+        setStatus('🔊 正在朗读...');
+    };
+
+    utterance.onend = () => {
+        setStatus('✅ 完成！试试下一句吧');
+    };
+
+    utterance.onerror = (event) => {
+        console.error('TTS error:', event.error, event.message);
+        setStatus('❌ 朗读出错: ' + event.error + (event.message ? ' - ' + event.message : ''));
+    };
+
+    try {
+        window.speechSynthesis.speak(utterance);
+    } catch(e) {
+        console.error('TTS speak error:', e);
+        setStatus('❌ 朗读失败: ' + e.message);
+    }
+}
+
+// 预加载语音列表
+if (window.speechSynthesis) {
+    // 立即触发一次
+    window.speechSynthesis.getVoices();
+    // 异步加载完成时再触发
+    window.speechSynthesis.onvoiceschanged = () => {
+        window.speechSynthesis.getVoices();
+    };
+}
+
+// ============================================================
+//  事件绑定
+// ============================================================
+document.getElementById('sendBtn').addEventListener('click', () => {
+    unlockTTS();
+    const text = document.getElementById('textInput').value;
+    sendMessage(text);
+});
+
+document.getElementById('textInput').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        unlockTTS();
+        const text = document.getElementById('textInput').value;
+        sendMessage(text);
+    }
+});
+
+document.getElementById('textInput').focus();
+</script>
+</body>
+</html>
