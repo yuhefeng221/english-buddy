@@ -14,7 +14,7 @@ app = Flask(__name__, static_folder=".")
 # ============================================================
 # 配置区 - 你的 DeepSeek API Key
 # ============================================================
-DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "sk-67f8047b368f43a8badd25ba559f435c")
+DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY", "")
 DEEPSEEK_API_URL = "https://api.deepseek.com/v1/chat/completions"
 
 
